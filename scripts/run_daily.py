@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 from app.config import load_settings
 from app.dependencies import missing_runtime_dependencies
 from app.fetcher import JRAFetcher
-from app.notifier import build_prediction_message, build_skip_message
+from app.notifier import build_prediction_notification, build_skip_notification
 from app.notifier.discord import DiscordWebhookNotifier
 from app.notifier.dry_run import DryRunNotifier
 from app.predictor import PredictionEngine
@@ -35,14 +35,14 @@ def main() -> int:
     else:
         missing = missing_runtime_dependencies()
         if missing:
-            message = build_skip_message(
+            message = build_skip_notification(
                 "実データ取得の準備不足",
                 (
                     f"未インストール: {', '.join(missing)}",
                     "先に pip install -r requirements.txt を実行してください",
                 ),
             )
-            DryRunNotifier().send(message)
+            DryRunNotifier().send_message(message)
             return 1
 
         fetcher = JRAFetcher()
@@ -83,21 +83,21 @@ def main() -> int:
         store.save_prediction(prediction)
 
     if fetch_errors and not predictions:
-        message = build_skip_message("JRAデータ取得失敗", tuple(fetch_errors))
+        message = build_skip_notification("JRAデータ取得失敗", tuple(fetch_errors))
     elif not races and time_skip_reasons:
-        message = build_skip_message("今日は見送り推奨", time_skip_reasons)
+        message = build_skip_notification("今日は見送り推奨", time_skip_reasons)
     elif not races:
-        message = build_skip_message("必要データ不足", ("対象レースを取得できませんでした",))
+        message = build_skip_notification("必要データ不足", ("対象レースを取得できませんでした",))
     elif not predictions:
         reasons = tuple(dict.fromkeys(skipped_reasons)) or ("堅いレースなし",)
-        message = build_skip_message("今日は見送り推奨", reasons)
+        message = build_skip_notification("今日は見送り推奨", reasons)
     else:
-        message = build_prediction_message(tuple(predictions))
+        message = build_prediction_notification(tuple(predictions))
 
     notifier = DryRunNotifier()
     if settings.discord_webhook_url and not args.dry_run:
         notifier = DiscordWebhookNotifier(settings.discord_webhook_url)
-    notifier.send(message)
+    notifier.send_message(message)
     return 0
 
 

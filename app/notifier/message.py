@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from app.models import Prediction
+from app.notifier.base import NotificationMessage
 
 
-def build_prediction_message(predictions: tuple[Prediction, ...]) -> str:
+def build_prediction_notification(predictions: tuple[Prediction, ...]) -> NotificationMessage:
     if not predictions:
-        return build_skip_message("今日は見送り推奨", ("堅いレースなし",))
+        return build_skip_notification("今日は見送り推奨", ("堅いレースなし",))
 
-    lines = [f"本日の狙い目 {len(predictions)}レース"]
+    title = f"本日の狙い目 {len(predictions)}レース"
+    lines: list[str] = []
     for index, prediction in enumerate(predictions, start=1):
         race = prediction.race
-        lines.append("")
+        if lines:
+            lines.append("")
         lines.append(f"{index}位 {race.venue}{race.race_number}R {race.race_name}")
         if race.start_time:
             lines.append(f"発走 {race.start_time}")
@@ -27,13 +30,25 @@ def build_prediction_message(predictions: tuple[Prediction, ...]) -> str:
         lines.append("理由:")
         for reason in prediction.race_score.reasons[:3]:
             lines.append(f"・{reason}")
-    return "\n".join(lines)
+    return NotificationMessage(title=title, body="\n".join(lines))
 
 
-def build_skip_message(title: str, reasons: tuple[str, ...]) -> str:
-    lines = [title]
+def build_prediction_message(predictions: tuple[Prediction, ...]) -> str:
+    return _format_message(build_prediction_notification(predictions))
+
+
+def build_skip_notification(title: str, reasons: tuple[str, ...]) -> NotificationMessage:
+    lines: list[str] = []
     if reasons:
         lines.append("理由:")
         for reason in reasons:
             lines.append(f"・{reason}")
-    return "\n".join(lines)
+    return NotificationMessage(title=title, body="\n".join(lines))
+
+
+def build_skip_message(title: str, reasons: tuple[str, ...]) -> str:
+    return _format_message(build_skip_notification(title, reasons))
+
+
+def _format_message(message: NotificationMessage) -> str:
+    return f"{message.title}\n{message.body}" if message.body else message.title

@@ -4,5 +4,7 @@ from app.notifier.base import Notifier
 
 
 class DryRunNotifier(Notifier):
-    def send(self, message: str) -> None:
-        print(message)
+    def send(self, title: str, body: str = "") -> None:
+        print(title)
+        if body:
+            print(body)

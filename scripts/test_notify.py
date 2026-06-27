@@ -22,9 +22,8 @@ def main() -> int:
         return 2
 
     now = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S JST")
-    message = f"K-Notify 接続テスト\n送信時刻: {now}"
     try:
-        DiscordWebhookNotifier(settings.discord_webhook_url).send(message)
+        DiscordWebhookNotifier(settings.discord_webhook_url).send("K-Notify 接続テスト", f"送信時刻: {now}")
     except RuntimeError as exc:
         print(exc)
         return 1

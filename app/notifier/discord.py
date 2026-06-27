@@ -11,8 +11,9 @@ class DiscordWebhookNotifier(Notifier):
     def __init__(self, webhook_url: str) -> None:
         self.webhook_url = webhook_url
 
-    def send(self, message: str) -> None:
-        payload = json.dumps({"content": message}, ensure_ascii=False).encode("utf-8")
+    def send(self, title: str, body: str = "") -> None:
+        content = f"{title}\n{body}" if body else title
+        payload = json.dumps({"content": content}, ensure_ascii=False).encode("utf-8")
         req = request.Request(
             self.webhook_url,
             data=payload,
