@@ -24,8 +24,11 @@ class PredictionEngine:
         second = horse_scores[1]
         third = horse_scores[2] if len(horse_scores) >= 3 else None
 
-        gap_bonus = min(20, max(0, int((top.score - second.score) * 2)))
-        confidence = max(0, min(100, int(race_score.score * 0.75 + gap_bonus)))
+        gap_bonus = min(15, max(0, int((top.score - second.score) * 1.5)))
+        confidence = max(
+            0,
+            min(100, int(race_score.score * 0.6 + race_score.value_score * 0.25 + gap_bonus)),
+        )
 
         marks = {"◎": top.entry, "○": second.entry}
         if third is not None:
@@ -37,12 +40,16 @@ class PredictionEngine:
         if third is not None and top.entry.horse_number is not None and third.entry.horse_number is not None:
             bets.append(Bet("ワイド", (top.entry.horse_number, third.entry.horse_number), 300))
 
-        reasons = (
+        reasons = [
             f"堅実度 {race_score.score}",
+            f"妙味 {race_score.value_score}",
             "上位馬のオッズと安定度を重視",
             "馬体重未発表は中立評価",
-        )
-        return Prediction(race, race_score, horse_scores, confidence, marks, tuple(bets[:2]), reasons)
+        ]
+        if len(bets) >= 2 and bets[0].numbers[0] == bets[1].numbers[0]:
+            reasons.append("軸依存リスクあり")
+        reasons.extend(race_score.risk_flags)
+        return Prediction(race, race_score, horse_scores, confidence, marks, tuple(bets[:2]), tuple(dict.fromkeys(reasons)))
 
     def _score_entry(self, entry: Entry) -> HorseScore:
         score = 50.0

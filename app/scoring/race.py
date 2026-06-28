@@ -6,9 +6,10 @@ from app.models import Race, RaceScore
 class RaceScorer:
     def score(self, race: Race) -> RaceScore:
         reasons: list[str] = []
+        risk_flags: list[str] = []
         exclusions = self._exclusion_reasons(race)
         if exclusions:
-            return RaceScore(race.race_id, 0, False, tuple(exclusions))
+            return RaceScore(race.race_id, 0, False, tuple(exclusions), 0, ())
 
         score = 50
         entries = sorted(
@@ -20,15 +21,28 @@ class RaceScorer:
         if favorite is None:
             reasons.append("単勝オッズ不足")
             score -= 25
-        elif favorite.win_odds <= 2.5:
+        elif favorite.win_odds <= 1.6:
+            reasons.append("1人気がかなり抜けている")
+            score += 18
+        elif favorite.win_odds <= 1.9:
             reasons.append("1人気が抜けている")
-            score += 25
+            score += 15
+        elif favorite.win_odds <= 2.2:
+            reasons.append("1人気は安定寄り")
+            score += 10
+            risk_flags.append("1人気2倍前後で過信禁止")
+        elif favorite.win_odds <= 2.5:
+            reasons.append("1人気はやや安定")
+            score += 6
+            risk_flags.append("1人気2倍台で過信禁止")
         elif favorite.win_odds <= 3.5:
             reasons.append("1人気が比較的安定")
-            score += 15
+            score += 2
+            risk_flags.append("1人気が抜け切らない")
         elif favorite.win_odds <= 4.5:
             reasons.append("1人気の信頼度は普通")
-            score += 5
+            score -= 5
+            risk_flags.append("混戦寄り")
         else:
             reasons.append("1人気が高配当寄りで混戦")
             score -= 20
@@ -60,16 +74,82 @@ class RaceScorer:
             reasons.append("重馬場")
             score -= 15
 
+        if race.distance is not None and race.distance <= 1200:
+            reasons.append("短距離で展開リスク")
+            risk_flags.append("短距離で展開リスク")
+            score -= 8
+
         if race.surface == "ダート" and race.distance is not None and race.distance <= 1400:
             reasons.append("ダート短距離")
-            score -= 8
+            risk_flags.append("ダート短距離")
+            score -= 4
 
         if "ハンデ" in race.race_name:
             reasons.append("ハンデ戦")
-            score -= 10
+            risk_flags.append("ハンデ戦")
+            score -= 12
+
+        if "ハンデ" in race.race_name and race.distance is not None and race.distance <= 1200:
+            reasons.append("短距離ハンデは上限調整")
+            score = min(score, 82)
+
+        if favorite is not None and favorite.win_odds is not None and favorite.win_odds >= 2.0:
+            score = min(score, 90)
+
+        value_score, value_reasons = self._value_score(entries, race)
+        reasons.extend(value_reasons)
+        if score >= 75 and value_score < 50:
+            reasons.append("堅いが妙味不足")
 
         score = max(0, min(100, score))
-        return RaceScore(race.race_id, score, score >= 65, tuple(reasons))
+        value_score = max(0, min(100, value_score))
+        eligible = score >= 75 and value_score >= 50
+        return RaceScore(race.race_id, score, eligible, tuple(reasons), value_score, tuple(dict.fromkeys(risk_flags)))
+
+    def _value_score(self, entries: list, race: Race) -> tuple[int, tuple[str, ...]]:
+        reasons: list[str] = []
+        if not entries:
+            return 0, ("妙味評価に必要なオッズ不足",)
+
+        value = 50
+        favorite = entries[0]
+        favorite_odds = favorite.win_odds or 999.0
+        third_odds = entries[2].win_odds if len(entries) >= 3 else None
+
+        if favorite_odds <= 1.5:
+            reasons.append("1人気が安すぎる")
+            value -= 25
+        elif favorite_odds <= 1.8:
+            reasons.append("1人気の配当妙味は薄め")
+            value -= 15
+        elif favorite_odds <= 2.1:
+            reasons.append("1人気の妙味は控えめ")
+            value -= 8
+
+        if len(entries) >= 3 and third_odds is not None:
+            popularities = tuple(entry.popularity for entry in entries[:3])
+            if (
+                len(race.entries) <= 10
+                and popularities == (1, 2, 3)
+                and favorite_odds <= 2.1
+                and (entries[1].win_odds or 999.0) <= 6.5
+                and third_odds <= 7.0
+            ):
+                reasons.append("人気順通りで配当妙味が薄い")
+                value -= 12
+            elif 6.0 <= third_odds <= 12.0:
+                reasons.append("3番手に少し妙味あり")
+                value += 10
+
+        if "ハンデ" in race.race_name:
+            reasons.append("ハンデ戦で期待値を下げる")
+            value -= 8
+
+        if race.distance is not None and race.distance <= 1200:
+            reasons.append("短距離で妙味評価を下げる")
+            value -= 6
+
+        return value, tuple(reasons)
 
     def _exclusion_reasons(self, race: Race) -> list[str]:
         reasons: list[str] = []

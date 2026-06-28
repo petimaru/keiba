@@ -18,7 +18,10 @@ def build_prediction_notification(predictions: tuple[Prediction, ...]) -> Notifi
         if race.start_time:
             lines.append(f"発走 {race.start_time}")
         lines.append(f"堅実度 {prediction.race_score.score}")
+        lines.append(f"妙味 {prediction.race_score.value_score}")
         lines.append(f"推奨信頼度 {prediction.confidence}%")
+        if prediction.race_score.risk_flags:
+            lines.append(f"注意 {', '.join(prediction.race_score.risk_flags[:2])}")
         for mark, entry in prediction.marks.items():
             number = entry.horse_number if entry.horse_number is not None else "-"
             lines.append(f"{mark} {number} {entry.horse_name}")
@@ -28,7 +31,7 @@ def build_prediction_notification(predictions: tuple[Prediction, ...]) -> Notifi
                 left, right = bet.numbers
                 lines.append(f"{bet.kind} {left}-{right} {bet.amount}円")
         lines.append("理由:")
-        for reason in prediction.race_score.reasons[:3]:
+        for reason in prediction.race_score.reasons[:4]:
             lines.append(f"・{reason}")
     return NotificationMessage(title=title, body="\n".join(lines))
 

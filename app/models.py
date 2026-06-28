@@ -45,6 +45,8 @@ class RaceScore:
     score: int
     eligible: bool
     reasons: tuple[str, ...]
+    value_score: int = 0
+    risk_flags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

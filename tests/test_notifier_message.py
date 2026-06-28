@@ -31,6 +31,7 @@ class MessageTest(unittest.TestCase):
         assert prediction is not None
         message = build_prediction_message((prediction,))
         self.assertIn("推奨信頼度", message)
+        self.assertIn("妙味", message)
         self.assertNotIn("推奨確率", message)
 
 
