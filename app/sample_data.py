@@ -20,8 +20,8 @@ def build_sample_races(target_date: date) -> tuple[Race, ...]:
             start_time="15:45",
             entries=(
                 Entry("h001", "サンプルスター", 6, 12, win_odds=2.1, place_odds_min=1.2, place_odds_max=1.5, popularity=1, recent_finishes=(1, 2, 2, 1, 3)),
-                Entry("h002", "サンプルロード", 4, 7, win_odds=4.8, place_odds_min=1.5, place_odds_max=2.0, popularity=2, recent_finishes=(2, 3, 1, 4, 2)),
-                Entry("h003", "サンプルミライ", 2, 3, win_odds=7.2, place_odds_min=2.0, place_odds_max=2.8, popularity=3, recent_finishes=(3, 2, 5, 2, 1)),
+                Entry("h002", "サンプルロード", 4, 7, win_odds=4.8, place_odds_min=1.8, place_odds_max=2.6, popularity=2, recent_finishes=(2, 3, 1, 4, 2)),
+                Entry("h003", "サンプルミライ", 2, 3, win_odds=7.2, place_odds_min=2.7, place_odds_max=4.0, popularity=3, recent_finishes=(3, 2, 5, 2, 1)),
                 Entry("h004", "サンプルノヴァ", 1, 1, win_odds=18.5, place_odds_min=4.1, place_odds_max=6.2, popularity=8, recent_finishes=(8, 6, 4, 5, 7)),
             ),
         ),

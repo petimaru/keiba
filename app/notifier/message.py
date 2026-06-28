@@ -19,6 +19,8 @@ def build_prediction_notification(predictions: tuple[Prediction, ...]) -> Notifi
             lines.append(f"発走 {race.start_time}")
         lines.append(f"堅実度 {prediction.race_score.score}")
         lines.append(f"妙味 {prediction.race_score.value_score}")
+        if prediction.race_score.estimated_wide_payout is not None:
+            lines.append(f"推定ワイド {prediction.race_score.estimated_wide_payout:.1f}倍")
         lines.append(f"推奨信頼度 {prediction.confidence}%")
         if prediction.race_score.risk_flags:
             lines.append(f"注意 {', '.join(prediction.race_score.risk_flags[:2])}")

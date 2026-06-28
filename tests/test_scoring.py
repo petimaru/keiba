@@ -28,6 +28,7 @@ class RaceScorerTest(unittest.TestCase):
         self.assertTrue(score.eligible)
         self.assertGreaterEqual(score.score, 75)
         self.assertGreaterEqual(score.value_score, 50)
+        self.assertIsNotNone(score.estimated_wide_payout)
 
     def test_skips_stable_but_low_value_race(self) -> None:
         race = Race(
@@ -52,6 +53,28 @@ class RaceScorerTest(unittest.TestCase):
         self.assertLess(score.value_score, 50)
         self.assertFalse(score.eligible)
         self.assertIn("堅いが妙味不足", score.reasons)
+
+    def test_skips_low_estimated_wide_payout(self) -> None:
+        race = Race(
+            "r5",
+            date(2026, 6, 28),
+            "函館",
+            9,
+            "低配当テスト特別",
+            1800,
+            "芝",
+            track_condition="良",
+            entries=(
+                Entry("h1", "A", horse_number=1, win_odds=1.7, place_odds_min=1.1, place_odds_max=1.2, popularity=1),
+                Entry("h2", "B", horse_number=2, win_odds=3.2, place_odds_min=1.2, place_odds_max=1.4, popularity=2),
+                Entry("h3", "C", horse_number=3, win_odds=4.8, place_odds_min=1.3, place_odds_max=1.5, popularity=3),
+                Entry("h4", "D", horse_number=4, win_odds=18.0, place_odds_min=3.2, place_odds_max=5.0, popularity=4),
+            ),
+        )
+        score = RaceScorer().score(race)
+        self.assertLess(score.estimated_wide_payout or 999.0, 1.8)
+        self.assertFalse(score.eligible)
+        self.assertIn("推定ワイド配当が低い", score.reasons)
 
     def test_penalizes_short_handicap_race(self) -> None:
         race = Race(

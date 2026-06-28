@@ -47,6 +47,7 @@ class RaceScore:
     reasons: tuple[str, ...]
     value_score: int = 0
     risk_flags: tuple[str, ...] = ()
+    estimated_wide_payout: float | None = None
 
 
 @dataclass(frozen=True)

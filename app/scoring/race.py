@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import sqrt
+
 from app.models import Race, RaceScore
 
 
@@ -96,7 +98,8 @@ class RaceScorer:
         if favorite is not None and favorite.win_odds is not None and favorite.win_odds >= 2.0:
             score = min(score, 90)
 
-        value_score, value_reasons = self._value_score(entries, race)
+        estimated_wide_payout = self._estimate_wide_payout(entries)
+        value_score, value_reasons = self._value_score(entries, race, estimated_wide_payout)
         reasons.extend(value_reasons)
         if score >= 75 and value_score < 50:
             reasons.append("堅いが妙味不足")
@@ -104,9 +107,19 @@ class RaceScorer:
         score = max(0, min(100, score))
         value_score = max(0, min(100, value_score))
         eligible = score >= 75 and value_score >= 50
-        return RaceScore(race.race_id, score, eligible, tuple(reasons), value_score, tuple(dict.fromkeys(risk_flags)))
+        return RaceScore(
+            race.race_id,
+            score,
+            eligible,
+            tuple(reasons),
+            value_score,
+            tuple(dict.fromkeys(risk_flags)),
+            estimated_wide_payout,
+        )
 
-    def _value_score(self, entries: list, race: Race) -> tuple[int, tuple[str, ...]]:
+    def _value_score(
+        self, entries: list, race: Race, estimated_wide_payout: float | None
+    ) -> tuple[int, tuple[str, ...]]:
         reasons: list[str] = []
         if not entries:
             return 0, ("妙味評価に必要なオッズ不足",)
@@ -149,7 +162,49 @@ class RaceScorer:
             reasons.append("短距離で妙味評価を下げる")
             value -= 6
 
+        if estimated_wide_payout is not None:
+            reasons.append(f"推定ワイド倍率 {estimated_wide_payout:.1f}倍")
+            if estimated_wide_payout < 1.8:
+                reasons.append("推定ワイド配当が低い")
+                value -= 35
+            elif estimated_wide_payout < 2.0:
+                reasons.append("推定ワイド配当は控えめ")
+                value -= 10
+            elif estimated_wide_payout <= 3.5:
+                reasons.append("ワイド配当に最低限の妙味")
+                value += 8
+
         return value, tuple(reasons)
+
+    def _estimate_wide_payout(self, entries: list) -> float | None:
+        if len(entries) < 2:
+            return None
+
+        first = self._estimate_pair_wide(entries[0], entries[1])
+        if first is None:
+            return None
+        if len(entries) < 3:
+            return first
+
+        second = self._estimate_pair_wide(entries[0], entries[2])
+        if second is None:
+            return first
+        return round(first * 0.7 + second * 0.3, 1)
+
+    def _estimate_pair_wide(self, left, right) -> float | None:
+        left_place = self._place_mid(left)
+        right_place = self._place_mid(right)
+        if left_place is not None and right_place is not None:
+            return round(max(1.1, min(8.0, ((left_place + right_place) / 2) * 1.15)), 1)
+
+        if left.win_odds is None or right.win_odds is None:
+            return None
+        return round(max(1.1, min(8.0, sqrt(left.win_odds * right.win_odds) * 0.55)), 1)
+
+    def _place_mid(self, entry) -> float | None:
+        if entry.place_odds_min is None or entry.place_odds_max is None:
+            return None
+        return (entry.place_odds_min + entry.place_odds_max) / 2
 
     def _exclusion_reasons(self, race: Race) -> list[str]:
         reasons: list[str] = []
