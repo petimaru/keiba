@@ -83,6 +83,8 @@ python scripts/run_daily.py --source-dir ./samples/jra_html --dry-run
 
 ## GitHub Actions
 
-`.github/workflows/daily.yml` は土日 9:00 JSTに実行します。
+`.github/workflows/daily.yml` は土日 9:07 JSTに実行します。
+
+GitHub ActionsのscheduleはUTC指定です。`7 0 * * 6,0` は日本時間の土日9:07です。GitHub Actionsは毎時0分付近で遅延・取りこぼしが起きる場合があるため、9:00ちょうどではなく9:07にしています。
 
 Discord通知する場合は、GitHub Secretsに `DISCORD_WEBHOOK_URL` を登録してください。
